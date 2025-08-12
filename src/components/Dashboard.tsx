@@ -166,15 +166,15 @@ const Dashboard: React.FC = () => {
   const getStatusColor = (status: Job['status']) => {
     switch (status) {
       case 'Dispatched':
-        return 'bg-blue-50 border-blue-200';
+        return 'bg-blue-200 border-blue-300';
       case 'Inspection':
-        return 'bg-amber-50 border-amber-200';
+        return 'bg-amber-200 border-amber-300';
       case 'Repairing':
-        return 'bg-orange-50 border-orange-200';
+        return 'bg-orange-200 border-orange-300';
       case 'Completed':
-        return 'bg-green-50 border-green-200';
+        return 'bg-green-200 border-green-300';
       default:
-        return 'bg-gray-50 border-gray-200';
+        return 'bg-gray-200 border-gray-300';
     }
   };
 
