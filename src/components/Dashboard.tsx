@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 
 interface Job {
   id: string;
@@ -11,7 +11,7 @@ interface Job {
 
 const Dashboard: React.FC = () => {
   // Sample data for demonstration
-  const jobs: Job[] = [
+  const [jobs, setJobs] = useState<Job[]>([
     {
       id: '1',
       clientName: 'Al Manar Transport',
@@ -60,7 +60,104 @@ const Dashboard: React.FC = () => {
       description: 'Thermostat calibration',
       status: 'Completed'
     }
-  ];
+  ]);
+
+  // State for new job form
+  const [newJob, setNewJob] = useState({
+    clientName: '',
+    callDateTime: '',
+    maintenanceTeam: '',
+    description: '',
+    status: 'Dispatched' as Job['status']
+  });
+  
+  const [showAddForm, setShowAddForm] = useState(false);
+  const [draggedJob, setDraggedJob] = useState<Job | null>(null);
+  const [editingJob, setEditingJob] = useState<{ id: string; field: string } | null>(null);
+  const [editingText, setEditingText] = useState('');
+
+  // Add new job
+  const addNewJob = () => {
+    if (!newJob.clientName.trim() || !newJob.description.trim()) return;
+
+    const updatedJobs = [...jobs];
+    updatedJobs.push({
+      id: Date.now().toString(),
+      ...newJob,
+      callDateTime: newJob.callDateTime || new Date().toLocaleString()
+    });
+
+    setJobs(updatedJobs);
+    setNewJob({
+      clientName: '',
+      callDateTime: '',
+      maintenanceTeam: '',
+      description: '',
+      status: 'Dispatched'
+    });
+    setShowAddForm(false);
+  };
+
+  // Remove job
+  const removeJob = (jobId: string) => {
+    const updatedJobs = jobs.filter(job => job.id !== jobId);
+    setJobs(updatedJobs);
+  };
+
+  // Start editing
+  const startEditing = (jobId: string, field: string, currentValue: string) => {
+    setEditingJob({ id: jobId, field });
+    setEditingText(currentValue);
+  };
+
+  // Save edited job
+  const saveEditedJob = () => {
+    if (!editingJob || editingText.trim() === '') return;
+
+    const updatedJobs = jobs.map(job => {
+      if (job.id === editingJob.id) {
+        return {
+          ...job,
+          [editingJob.field]: editingText.trim()
+        };
+      }
+      return job;
+    });
+
+    setJobs(updatedJobs);
+    setEditingJob(null);
+    setEditingText('');
+  };
+
+  // Cancel editing
+  const cancelEditing = () => {
+    setEditingJob(null);
+    setEditingText('');
+  };
+
+  // Drag and drop handlers
+  const handleDragStart = (job: Job) => {
+    setDraggedJob(job);
+  };
+
+  const handleDragOver = (e: React.DragEvent) => {
+    e.preventDefault();
+  };
+
+  const handleDrop = (e: React.DragEvent, newStatus: Job['status']) => {
+    e.preventDefault();
+    if (!draggedJob || draggedJob.status === newStatus) return;
+
+    const updatedJobs = jobs.map(job => {
+      if (job.id === draggedJob.id) {
+        return { ...job, status: newStatus };
+      }
+      return job;
+    });
+
+    setJobs(updatedJobs);
+    setDraggedJob(null);
+  };
 
   const getJobsByStatus = (status: Job['status']) => {
     return jobs.filter(job => job.status === status);
@@ -97,20 +194,140 @@ const Dashboard: React.FC = () => {
   };
 
   const JobCard: React.FC<{ job: Job }> = ({ job }) => (
-    <div className={`p-4 rounded-lg border-2 mb-3 ${getStatusColor(job.status)} hover:shadow-md transition-shadow duration-200`}>
+    <div 
+      className={`p-4 rounded-lg border-2 mb-3 ${getStatusColor(job.status)} hover:shadow-md transition-shadow duration-200 cursor-move group`}
+      draggable={!editingJob || editingJob.id !== job.id}
+      onDragStart={() => handleDragStart(job)}
+    >
       <div className="flex justify-between items-start mb-2">
-        <h4 className="font-semibold text-gray-900">{job.clientName}</h4>
-        <span className={`px-2 py-1 text-xs font-medium rounded-full ${getStatusBadgeColor(job.status)}`}>
-          {job.status}
-        </span>
+        <div className="flex-1">
+          {editingJob && editingJob.id === job.id && editingJob.field === 'clientName' ? (
+            <input
+              type="text"
+              value={editingText}
+              onChange={(e) => setEditingText(e.target.value)}
+              className="w-full p-1 bg-white border border-gray-300 rounded text-sm font-semibold text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-500"
+              onKeyDown={(e) => {
+                if (e.key === 'Enter') saveEditedJob();
+                if (e.key === 'Escape') cancelEditing();
+              }}
+              autoFocus
+            />
+          ) : (
+            <h4 
+              className="font-semibold text-gray-900 cursor-pointer hover:text-blue-600"
+              onClick={() => startEditing(job.id, 'clientName', job.clientName)}
+            >
+              {job.clientName}
+            </h4>
+          )}
+        </div>
+        <div className="flex items-center gap-1 ml-2">
+          <span className={`px-2 py-1 text-xs font-medium rounded-full ${getStatusBadgeColor(job.status)}`}>
+            {job.status}
+          </span>
+          <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity duration-200">
+            {editingJob && editingJob.id === job.id ? (
+              <>
+                <button
+                  onClick={saveEditedJob}
+                  className="text-green-600 hover:text-green-500 transition-colors duration-200 p-1"
+                  title="Save changes"
+                >
+                  ✓
+                </button>
+                <button
+                  onClick={cancelEditing}
+                  className="text-red-600 hover:text-red-500 transition-colors duration-200 p-1"
+                  title="Cancel editing"
+                >
+                  ✕
+                </button>
+              </>
+            ) : (
+              <button
+                onClick={() => removeJob(job.id)}
+                className="text-red-600 hover:text-red-500 transition-colors duration-200 p-1"
+                title="Remove job"
+              >
+                ✕
+              </button>
+            )}
+          </div>
+        </div>
       </div>
-      <p className="text-sm text-gray-600 mb-2">{job.description}</p>
+      
+      <div className="mb-2">
+        {editingJob && editingJob.id === job.id && editingJob.field === 'description' ? (
+          <textarea
+            value={editingText}
+            onChange={(e) => setEditingText(e.target.value)}
+            className="w-full p-1 bg-white border border-gray-300 rounded text-sm text-gray-600 focus:outline-none focus:ring-2 focus:ring-blue-500"
+            onKeyDown={(e) => {
+              if (e.key === 'Enter' && !e.shiftKey) {
+                e.preventDefault();
+                saveEditedJob();
+              }
+              if (e.key === 'Escape') cancelEditing();
+            }}
+            autoFocus
+          />
+        ) : (
+          <p 
+            className="text-sm text-gray-600 cursor-pointer hover:text-blue-600"
+            onClick={() => startEditing(job.id, 'description', job.description)}
+          >
+            {job.description}
+          </p>
+        )}
+      </div>
+      
       <div className="space-y-1">
         <p className="text-xs text-gray-500">
-          <span className="font-medium">Call Time:</span> {job.callDateTime}
+          <span className="font-medium">Call Time:</span> 
+          {editingJob && editingJob.id === job.id && editingJob.field === 'callDateTime' ? (
+            <input
+              type="text"
+              value={editingText}
+              onChange={(e) => setEditingText(e.target.value)}
+              className="ml-1 p-1 bg-white border border-gray-300 rounded text-xs focus:outline-none focus:ring-2 focus:ring-blue-500"
+              onKeyDown={(e) => {
+                if (e.key === 'Enter') saveEditedJob();
+                if (e.key === 'Escape') cancelEditing();
+              }}
+              autoFocus
+            />
+          ) : (
+            <span 
+              className="ml-1 cursor-pointer hover:text-blue-600"
+              onClick={() => startEditing(job.id, 'callDateTime', job.callDateTime)}
+            >
+              {job.callDateTime}
+            </span>
+          )}
         </p>
         <p className="text-xs text-gray-500">
-          <span className="font-medium">Team:</span> {job.maintenanceTeam}
+          <span className="font-medium">Team:</span> 
+          {editingJob && editingJob.id === job.id && editingJob.field === 'maintenanceTeam' ? (
+            <input
+              type="text"
+              value={editingText}
+              onChange={(e) => setEditingText(e.target.value)}
+              className="ml-1 p-1 bg-white border border-gray-300 rounded text-xs focus:outline-none focus:ring-2 focus:ring-blue-500"
+              onKeyDown={(e) => {
+                if (e.key === 'Enter') saveEditedJob();
+                if (e.key === 'Escape') cancelEditing();
+              }}
+              autoFocus
+            />
+          ) : (
+            <span 
+              className="ml-1 cursor-pointer hover:text-blue-600"
+              onClick={() => startEditing(job.id, 'maintenanceTeam', job.maintenanceTeam)}
+            >
+              {job.maintenanceTeam}
+            </span>
+          )}
         </p>
       </div>
     </div>
@@ -177,10 +394,115 @@ const Dashboard: React.FC = () => {
           })}
         </div>
 
+        {/* Add New Job Form */}
+        {showAddForm && (
+          <div className="mb-8 bg-white rounded-lg shadow-lg border border-gray-200 p-6">
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-lg font-semibold text-gray-900">Add New Job</h3>
+              <button
+                onClick={() => setShowAddForm(false)}
+                className="text-gray-400 hover:text-gray-600 transition-colors duration-200"
+              >
+                ✕
+              </button>
+            </div>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Client Name</label>
+                <input
+                  type="text"
+                  value={newJob.clientName}
+                  onChange={(e) => setNewJob({ ...newJob, clientName: e.target.value })}
+                  className="w-full p-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  placeholder="Enter client name"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Maintenance Team</label>
+                <input
+                  type="text"
+                  value={newJob.maintenanceTeam}
+                  onChange={(e) => setNewJob({ ...newJob, maintenanceTeam: e.target.value })}
+                  className="w-full p-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  placeholder="Enter team name"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Call Date & Time</label>
+                <input
+                  type="text"
+                  value={newJob.callDateTime}
+                  onChange={(e) => setNewJob({ ...newJob, callDateTime: e.target.value })}
+                  className="w-full p-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  placeholder="e.g., 2025-08-13 10:30 AM"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Status</label>
+                <select
+                  value={newJob.status}
+                  onChange={(e) => setNewJob({ ...newJob, status: e.target.value as Job['status'] })}
+                  className="w-full p-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                >
+                  {statuses.map((status) => (
+                    <option key={status} value={status}>
+                      {status}
+                    </option>
+                  ))}
+                </select>
+              </div>
+              <div className="md:col-span-2">
+                <label className="block text-sm font-medium text-gray-700 mb-1">Description</label>
+                <textarea
+                  value={newJob.description}
+                  onChange={(e) => setNewJob({ ...newJob, description: e.target.value })}
+                  className="w-full p-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  placeholder="Enter job description"
+                  rows={3}
+                />
+              </div>
+            </div>
+            <div className="flex justify-end gap-3 mt-4">
+              <button
+                onClick={() => setShowAddForm(false)}
+                className="px-4 py-2 text-gray-600 hover:text-gray-800 transition-colors duration-200"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={addNewJob}
+                className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors duration-200"
+              >
+                Add Job
+              </button>
+            </div>
+          </div>
+        )}
+
+        {/* Add Job Button */}
+        {!showAddForm && (
+          <div className="mb-8 text-center">
+            <button
+              onClick={() => setShowAddForm(true)}
+              className="px-6 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors duration-200 inline-flex items-center gap-2"
+            >
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+              </svg>
+              Add New Job
+            </button>
+          </div>
+        )}
+
         {/* Kanban Board */}
         <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
           {statuses.map((status) => (
-            <div key={status} className="bg-gray-50 rounded-lg p-4">
+            <div 
+              key={status} 
+              className="bg-gray-50 rounded-lg p-4"
+              onDragOver={handleDragOver}
+              onDrop={(e) => handleDrop(e, status)}
+            >
               <div className="flex items-center justify-between mb-4">
                 <h3 className="font-semibold text-gray-900">{status}</h3>
                 <span className={`px-2 py-1 text-xs font-medium rounded-full ${getStatusBadgeColor(status)}`}>
