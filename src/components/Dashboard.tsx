@@ -336,25 +336,9 @@ const Dashboard: React.FC = () => {
   const statuses: Job['status'][] = ['Dispatched', 'Inspection', 'Repairing', 'Completed'];
 
   return (
-    <div className="min-h-screen bg-white">
-      {/* Header */}
-      <header className="bg-white border-b border-gray-200 px-6 py-4">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center space-x-4">
-            <img src="/logo.png" alt="BSTC Logo" className="h-10 w-auto" />
-            <div>
-              <h1 className="text-2xl font-bold text-gray-900">BSTC Dashboard</h1>
-              <p className="text-sm text-gray-600">Breakdown Maintenance Service</p>
-            </div>
-          </div>
-          <div className="text-right">
-            <p className="text-sm text-gray-600">Muscat, Oman</p>
-            <p className="text-sm text-gray-500">{new Date().toLocaleDateString()}</p>
-          </div>
-        </div>
-      </header>
-
-      {/* Stats Overview */}
+    // <Layout>
+      <div className="bg-white">
+        {/* Stats Overview */}
       <div className="px-6 py-6">
         <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-8">
           {statuses.map((status) => {
@@ -524,6 +508,7 @@ const Dashboard: React.FC = () => {
         </div>
       </div>
     </div>
+ 
   );
 };
 
