@@ -70,6 +70,48 @@ const Dashboard: React.FC = () => {
     description: '',
     status: 'Dispatched' as Job['status']
   });
+
+  // Maintenance teams (simulate fetch from Settings)
+  const [maintenanceTeams, setMaintenanceTeams] = useState<string[]>(['Team Alpha', 'Team Beta', 'Team Gamma']);
+
+  // System/server time
+  const [serverTime, setServerTime] = useState<string>(new Date().toLocaleString());
+  React.useEffect(() => {
+    // Simulate fetch from server
+    const fetchTime = async () => {
+      try {
+        // Replace with actual API call if available
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 5000); // 5 second timeout
+        
+        const res = await fetch('https://worldtimeapi.org/api/timezone/Asia/Muscat', {
+          signal: controller.signal
+        });
+        clearTimeout(timeoutId);
+        
+        if (res.ok) {
+          const data = await res.json();
+          if (data.datetime) {
+            setServerTime(new Date(data.datetime).toLocaleString());
+          } else {
+            setServerTime(new Date().toLocaleString());
+          }
+        } else {
+          setServerTime(new Date().toLocaleString());
+        }
+      } catch (error) {
+        console.log('Using local time as fallback:', error);
+        setServerTime(new Date().toLocaleString());
+      }
+    };
+    
+    fetchTime();
+    const interval = setInterval(() => {
+      setServerTime(new Date().toLocaleString());
+    }, 1000); // Update every second
+    
+    return () => clearInterval(interval);
+  }, []);
   
   const [showAddForm, setShowAddForm] = useState(false);
   const [draggedJob, setDraggedJob] = useState<Job | null>(null);
@@ -338,13 +380,18 @@ const Dashboard: React.FC = () => {
   return (
     // <Layout>
       <div className="bg-white">
+        {/* System/server time display */}
+        <div className="px-6 pt-4 pb-2 text-right text-xs text-gray-500">
+          <span>System Time: {serverTime}</span>
+        </div>
         {/* Stats Overview */}
       <div className="px-6 py-6">
         <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-8">
           {statuses.map((status) => {
             const count = getJobsByStatus(status).length;
             return (
-              <div key={status} className={`p-4 rounded-lg border ${getStatusColor(status)}`}>
+              <div key={status} className={`p-4 rounded-lg border ${getStatusColor(status)} relative`}
+                style={{ borderRight: '3px dashed #cbd5e1' }}>
                 <div className="flex items-center justify-between">
                   <div>
                     <p className="text-sm font-medium text-gray-600">{status}</p>
@@ -352,18 +399,18 @@ const Dashboard: React.FC = () => {
                   </div>
                   <div className={`p-2 rounded-full ${getStatusBadgeColor(status)}`}>
                     {status === 'Dispatched' && (
-                      <svg className="w-6 h-6" fill="currentColor" viewBox="0 0 20 20">
-                        <path d="M3 4a1 1 0 011-1h12a1 1 0 011 1v2a1 1 0 01-1 1H4a1 1 0 01-1-1V4zM3 10a1 1 0 011-1h6a1 1 0 011 1v6a1 1 0 01-1 1H4a1 1 0 01-1-1v-6zM14 9a1 1 0 00-1 1v6a1 1 0 001 1h2a1 1 0 001-1v-6a1 1 0 00-1-1h-2z" />
+                      <svg className="w-6 h-6" fill="currentColor" viewBox="0 0 24 24">
+                        <path d="M18.92 6.01C18.72 5.42 18.16 5 17.5 5h-11C5.84 5 5.28 5.42 5.08 6.01L3 12v8c0 .55.45 1 1 1h1c.55 0 1-.45 1-1v-1h12v1c0 .55.45 1 1 1h1c.55 0 1-.45 1-1v-8l-2.08-5.99zM6.5 16c-.83 0-1.5-.67-1.5-1.5S5.67 13 6.5 13s1.5.67 1.5 1.5S7.33 16 6.5 16zm11 0c-.83 0-1.5-.67-1.5-1.5s.67-1.5 1.5-1.5 1.5.67 1.5 1.5-.67 1.5-1.5 1.5zM5 11l1.5-4.5h11L19 11H5z"/>
                       </svg>
                     )}
                     {status === 'Inspection' && (
-                      <svg className="w-6 h-6" fill="currentColor" viewBox="0 0 20 20">
-                        <path d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                      <svg className="w-6 h-6" fill="currentColor" viewBox="0 0 24 24">
+                        <path d="M15.5 14h-.79l-.28-.27A6.5 6.5 0 1 0 13.16 15.28l.27.28v.79l5 4.99L20.49 19l-4.99-5zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14z"/>
                       </svg>
                     )}
                     {status === 'Repairing' && (
-                      <svg className="w-6 h-6" fill="currentColor" viewBox="0 0 20 20">
-                        <path d="M13.586 3.586a2 2 0 112.828 2.828l-.793.793-2.828-2.828.793-.793zM11.379 5.793L3 14.172V17h2.828l8.38-8.379-2.83-2.828z" />
+                      <svg className="w-6 h-6" fill="currentColor" viewBox="0 0 24 24">
+                        <path d="M12,15.5A3.5,3.5 0 0,1 8.5,12A3.5,3.5 0 0,1 12,8.5a3.5,3.5 0 0,1 3.5,3.5A3.5,3.5 0 0,1 12,15.5M19.43,12.97C19.47,12.65 19.5,12.33 19.5,12C19.5,11.67 19.47,11.34 19.43,11L21.54,9.37C21.73,9.22 21.78,8.95 21.66,8.73L19.66,5.27C19.54,5.05 19.27,4.96 19.05,5.05L16.56,6.05C16.04,5.66 15.5,5.32 14.87,5.07L14.5,2.42C14.46,2.18 14.25,2 14,2H10C9.75,2 9.54,2.18 9.5,2.42L9.13,5.07C8.5,5.32 7.96,5.66 7.44,6.05L4.95,5.05C4.73,4.96 4.46,5.05 4.34,5.27L2.34,8.73C2.22,8.95 2.27,9.22 2.46,9.37L4.57,11C4.53,11.34 4.5,11.67 4.5,12C4.5,12.33 4.53,12.65 4.57,12.97L2.46,14.63C2.27,14.78 2.22,15.05 2.34,15.27L4.34,18.73C4.46,18.95 4.73,19.03 4.95,18.95L7.44,17.94C7.96,18.34 8.5,18.68 9.13,18.93L9.5,21.58C9.54,21.82 9.75,22 10,22H14C14.25,22 14.46,21.82 14.5,21.58L14.87,18.93C15.5,18.67 16.04,18.34 16.56,17.94L19.05,18.95C19.27,19.03 19.54,18.95 19.66,18.73L21.66,15.27C21.78,15.05 21.73,14.78 21.54,14.63L19.43,12.97Z"/>
                       </svg>
                     )}
                     {status === 'Completed' && (
@@ -373,6 +420,9 @@ const Dashboard: React.FC = () => {
                     )}
                   </div>
                 </div>
+                {/* <div className="absolute left-0 bottom-0 w-full text-center text-[10px] text-gray-400 pt-2">
+                  <span>Drag jobs here to update status</span>
+                </div> */}
               </div>
             );
           })}
@@ -403,13 +453,16 @@ const Dashboard: React.FC = () => {
               </div>
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">Maintenance Team</label>
-                <input
-                  type="text"
+                <select
                   value={newJob.maintenanceTeam}
                   onChange={(e) => setNewJob({ ...newJob, maintenanceTeam: e.target.value })}
                   className="w-full p-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  placeholder="Enter team name"
-                />
+                >
+                  <option value="">Select team</option>
+                  {maintenanceTeams.map((team) => (
+                    <option key={team} value={team}>{team}</option>
+                  ))}
+                </select>
               </div>
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">Call Date & Time</label>
@@ -479,11 +532,11 @@ const Dashboard: React.FC = () => {
         )}
 
         {/* Kanban Board */}
-        <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
+        <div className="grid grid-cols-1 lg:grid-cols-4 gap-6 ">
           {statuses.map((status) => (
             <div 
               key={status} 
-              className="bg-gray-50 rounded-lg p-4"
+              className="bg-gray-300 rounded-lg p-4"
               onDragOver={handleDragOver}
               onDrop={(e) => handleDrop(e, status)}
             >
